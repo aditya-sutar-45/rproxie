@@ -4,36 +4,20 @@ package rproxy
 import (
 	"log"
 	"net/http"
-	"net/url"
+
+	"github.com/aditya-sutar-45/rproxie/internal/backend"
 )
-
-type Backend struct {
-	Addr string
-	URL  *url.URL
-}
-
-func NewBackend(addr string) (*Backend, error) {
-	backendURL, err := url.Parse(addr)
-	if err != nil {
-		return nil, err
-	}
-
-	return &Backend{
-		Addr: addr,
-		URL:  backendURL,
-	}, nil
-}
 
 type ReverseProxy struct {
 	portString string
-	backends   []*Backend
+	backends   []*backend.Backend
 	client     *http.Client
 }
 
 func New(portString string, backendAddrs []string) (*ReverseProxy, error) {
-	backends := []*Backend{}
+	backends := []*backend.Backend{}
 	for _, b := range backendAddrs {
-		backend, err := NewBackend(b)
+		backend, err := backend.New(b)
 		if err != nil {
 			return nil, err
 		}
