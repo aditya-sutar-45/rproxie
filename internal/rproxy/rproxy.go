@@ -7,20 +7,42 @@ import (
 	"net/url"
 )
 
-type ReverseProxy struct {
-	portString string
-	backendAPI *url.URL
-	client     *http.Client
+type Backend struct {
+	Addr string
+	URL  *url.URL
 }
 
-func New(portString string, backendAPI string) (*ReverseProxy, error) {
-	backendURL, err := url.Parse(backendAPI)
+func NewBackend(addr string) (*Backend, error) {
+	backendURL, err := url.Parse(addr)
 	if err != nil {
 		return nil, err
 	}
+
+	return &Backend{
+		Addr: addr,
+		URL:  backendURL,
+	}, nil
+}
+
+type ReverseProxy struct {
+	portString string
+	backends   []*Backend
+	client     *http.Client
+}
+
+func New(portString string, backendAddrs []string) (*ReverseProxy, error) {
+	backends := []*Backend{}
+	for _, b := range backendAddrs {
+		backend, err := NewBackend(b)
+		if err != nil {
+			return nil, err
+		}
+		backends = append(backends, backend)
+	}
+
 	return &ReverseProxy{
 		portString: portString,
-		backendAPI: backendURL,
+		backends:   backends,
 		client:     &http.Client{},
 	}, nil
 }

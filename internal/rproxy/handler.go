@@ -10,7 +10,7 @@ import (
 
 func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {
 	// url := fmt.Sprintf("%s%s", rp.backendAPI, r.URL)
-	target := *rp.backendAPI
+	target := *rp.backends[0].URL
 	target.Path = r.URL.Path
 	target.RawQuery = r.URL.RawQuery
 
