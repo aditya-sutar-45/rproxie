@@ -2,8 +2,10 @@
 package rproxy
 
 import (
+	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/aditya-sutar-45/rproxie/internal/backend"
@@ -11,12 +13,13 @@ import (
 )
 
 type ReverseProxy struct {
-	portString string
-	backends   []*backend.Backend
-	client     *http.Client
+	port     int
+	backends []*backend.Backend
+	client   *http.Client
+	logger   *slog.Logger
 }
 
-func New(portString string, backendAddrs []string) (*ReverseProxy, error) {
+func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
 	for _, b := range backendAddrs {
 		backend, err := backend.New(b)
@@ -27,18 +30,20 @@ func New(portString string, backendAddrs []string) (*ReverseProxy, error) {
 	}
 
 	return &ReverseProxy{
-		portString: portString,
-		backends:   backends,
-		client:     &http.Client{},
+		port:     port,
+		backends: backends,
+		client:   &http.Client{},
+		logger:   logger,
 	}, nil
 }
 
 func (rp *ReverseProxy) Start() error {
+	portString := fmt.Sprintf(":%d", rp.port)
 	http.HandleFunc("/", rp.handler)
 
-	log.Printf("INFO server is starting on port %s\n", rp.portString)
+	rp.logger.Info("server starting", "port", rp.port)
 
-	err := http.ListenAndServe(rp.portString, nil)
+	err := http.ListenAndServe(portString, nil)
 	if err != nil {
 		return err
 	}
