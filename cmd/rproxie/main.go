@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/aditya-sutar-45/rproxie/internal/config"
 	"github.com/aditya-sutar-45/rproxie/internal/logger"
 	"github.com/aditya-sutar-45/rproxie/internal/rproxy"
 	"github.com/joho/godotenv"
@@ -16,11 +17,14 @@ func main() {
 
 	appLogger := logger.New()
 
-	backends := []string{"http://localhost:9000"}
+	cfg, err := config.Load()
+	if err != nil {
+		appLogger.Error("could not load config", "error", err)
+	}
 
 	rproxy, err := rproxy.New(
-		8000,
-		backends,
+		cfg.Port,
+		cfg.Backends,
 		appLogger,
 	)
 	if err != nil {
