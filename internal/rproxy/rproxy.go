@@ -10,14 +10,16 @@ import (
 	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/backend"
+	"github.com/aditya-sutar-45/rproxie/internal/loadbalancer"
 	"github.com/aditya-sutar-45/rproxie/internal/utils"
 )
 
 type ReverseProxy struct {
-	port     int
-	backends []*backend.Backend
-	client   *http.Client
-	logger   *slog.Logger
+	port         int
+	backends     []*backend.Backend
+	client       *http.Client
+	logger       *slog.Logger
+	loadBalancer *loadbalancer.LoadBalancer
 }
 
 func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, error) {
@@ -31,10 +33,11 @@ func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, e
 	}
 
 	return &ReverseProxy{
-		port:     port,
-		backends: backends,
-		client:   &http.Client{},
-		logger:   logger,
+		port:         port,
+		backends:     backends,
+		client:       &http.Client{},
+		logger:       logger,
+		loadBalancer: loadbalancer.New(len(backends)),
 	}, nil
 }
 
@@ -71,7 +74,14 @@ func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {
 		)
 	}()
 
-	request, err := rp.newRequest(r, rp.backends[0])
+	backendIndex, err := rp.loadBalancer.NextBackendIndex()
+	if err != nil {
+		logErr = err
+		utils.RespondWithError(w, http.StatusInternalServerError, "Internal Application Error")
+		return
+	}
+
+	request, err := rp.newRequest(r, rp.backends[backendIndex])
 	if err != nil {
 		logErr = err
 		utils.RespondWithError(w, http.StatusBadGateway, "backend unavailable")
