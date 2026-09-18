@@ -19,7 +19,7 @@ type ReverseProxy struct {
 	backends     []*backend.Backend
 	client       *http.Client
 	logger       *slog.Logger
-	loadBalancer *loadbalancer.LoadBalancer
+	loadBalancer loadbalancer.LoadBalancer
 }
 
 func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, error) {
