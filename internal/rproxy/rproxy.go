@@ -23,7 +23,7 @@ type ReverseProxy struct {
 	tickerDuration time.Duration
 }
 
-func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, error) {
+func New(port int, backendAddrs []string, logger *slog.Logger, tickerDuration time.Duration) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
 	for i, b := range backendAddrs {
 		backend, err := backend.New(b, strconv.Itoa(i), logger)
@@ -39,7 +39,7 @@ func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, e
 		client:         &http.Client{},
 		logger:         logger,
 		loadBalancer:   loadbalancer.New(len(backends)),
-		tickerDuration: 5 * time.Second,
+		tickerDuration: tickerDuration,
 	}, nil
 }
 

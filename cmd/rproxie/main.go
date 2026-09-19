@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/config"
 	"github.com/aditya-sutar-45/rproxie/internal/logger"
@@ -26,6 +27,7 @@ func main() {
 		cfg.Port,
 		cfg.Backends,
 		appLogger,
+		time.Second*5,
 	)
 	if err != nil {
 		appLogger.Error("creating a reverse proxy", "error", err)
