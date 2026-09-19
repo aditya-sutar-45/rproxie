@@ -15,11 +15,12 @@ import (
 )
 
 type ReverseProxy struct {
-	port         int
-	backends     []*backend.Backend
-	client       *http.Client
-	logger       *slog.Logger
-	loadBalancer loadbalancer.LoadBalancer
+	port           int
+	backends       []*backend.Backend
+	client         *http.Client
+	logger         *slog.Logger
+	loadBalancer   loadbalancer.LoadBalancer
+	tickerDuration time.Duration
 }
 
 func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, error) {
@@ -33,11 +34,12 @@ func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, e
 	}
 
 	return &ReverseProxy{
-		port:         port,
-		backends:     backends,
-		client:       &http.Client{},
-		logger:       logger,
-		loadBalancer: loadbalancer.New(len(backends)),
+		port:           port,
+		backends:       backends,
+		client:         &http.Client{},
+		logger:         logger,
+		loadBalancer:   loadbalancer.New(len(backends)),
+		tickerDuration: 5 * time.Second,
 	}, nil
 }
 
@@ -47,11 +49,14 @@ func (rp *ReverseProxy) Start() error {
 
 	rp.logger.Info("server starting", "port", rp.port)
 
+	go rp.startHealthChecks()
+
 	return http.ListenAndServe(portString, nil)
 }
 
 func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
+
 	var logErr error
 
 	defer func() {
@@ -149,4 +154,41 @@ func (rp *ReverseProxy) getNextHealthyBackend() (int, error) {
 
 func (rp *ReverseProxy) isBackendHealth(index int) bool {
 	return rp.backends[index].GetHealth()
+}
+
+func (rp *ReverseProxy) startHealthChecks() {
+	ticker := time.NewTicker(rp.tickerDuration)
+	defer ticker.Stop()
+
+	for range ticker.C {
+
+		rp.logger.Info(
+			"performing health checks",
+			"backendCount", len(rp.backends),
+		)
+
+		for _, b := range rp.backends {
+			currHealthStatus := b.GetHealth()
+			healthStatus := b.CheckHealth()
+
+			if currHealthStatus != healthStatus {
+				b.SetHealth(healthStatus)
+
+				if currHealthStatus && !healthStatus {
+					rp.logger.Error(
+						"backend became unavailable",
+						"backendID", b.ID,
+						"backendURL", b.URL,
+					)
+				}
+				if !currHealthStatus && healthStatus {
+					rp.logger.Info(
+						"backend recovered",
+						"backendID", b.ID,
+						"backendURL", b.URL,
+					)
+				}
+			}
+		}
+	}
 }
