@@ -25,7 +25,7 @@ type ReverseProxy struct {
 func New(port int, backendAddrs []string, logger *slog.Logger) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
 	for i, b := range backendAddrs {
-		backend, err := backend.New(b, strconv.Itoa(i))
+		backend, err := backend.New(b, strconv.Itoa(i), logger)
 		if err != nil {
 			return nil, err
 		}
@@ -74,7 +74,7 @@ func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {
 		)
 	}()
 
-	backendIndex, err := rp.loadBalancer.NextBackendIndex()
+	backendIndex, err := rp.getNextHealthyBackend()
 	if err != nil {
 		logErr = err
 		utils.RespondWithError(w, http.StatusInternalServerError, "Internal Application Error")
@@ -94,9 +94,7 @@ func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {
 		utils.RespondWithError(w, http.StatusBadGateway, "backend unavailable")
 		return
 	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
+	defer utils.CloseResponseBody(resp, rp.logger)
 
 	logErr = rp.writeResponse(w, resp)
 }
@@ -127,4 +125,28 @@ func (rp *ReverseProxy) writeResponse(w http.ResponseWriter, resp *http.Response
 
 	_, err := io.Copy(w, resp.Body)
 	return err
+}
+
+func (rp *ReverseProxy) getNextHealthyBackend() (int, error) {
+	backendIndex := -1
+	for range rp.backends {
+		index, err := rp.loadBalancer.NextBackendIndex()
+		if err != nil {
+			return backendIndex, err
+		}
+		if rp.isBackendHealth(index) {
+			backendIndex = index
+			break
+		}
+	}
+
+	if backendIndex == -1 {
+		return backendIndex, fmt.Errorf("all backends are unhealthy, backend count: %d", len(rp.backends))
+	}
+
+	return backendIndex, nil
+}
+
+func (rp *ReverseProxy) isBackendHealth(index int) bool {
+	return rp.backends[index].GetHealth()
 }

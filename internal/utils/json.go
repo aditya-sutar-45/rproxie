@@ -4,6 +4,7 @@ package utils
 import (
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 )
 
@@ -30,4 +31,14 @@ func RespondWithError(w http.ResponseWriter, code int, msg string) {
 	RespondWithJSON(w, code, ErrorResponse{
 		Error: msg,
 	})
+}
+
+func CloseResponseBody(r *http.Response, logger *slog.Logger) {
+	if err := r.Body.Close(); err != nil {
+		logger.Warn(
+			"could not close resposne body",
+			"error", err,
+			"response", r,
+		)
+	}
 }
