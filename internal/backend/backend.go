@@ -50,7 +50,6 @@ func (b *Backend) CheckHealth() bool {
 	url := fmt.Sprintf("%s/health", b.URL.String())
 	resp, err := http.Get(url)
 	if err != nil {
-		b.logger.Debug("sending request", "url", url, "error", err)
 		return false
 	}
 	defer utils.CloseResponseBody(resp, b.logger)
