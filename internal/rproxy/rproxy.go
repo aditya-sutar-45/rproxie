@@ -27,7 +27,7 @@ type ReverseProxy struct {
 func New(port int, backendAddrs []string, logger *slog.Logger, tickerDuration time.Duration) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
 	for i, b := range backendAddrs {
-		backend, err := backend.New(b, strconv.Itoa(i), logger)
+		backend, err := backend.New(b, strconv.Itoa(i), logger, 2*time.Second)
 		if err != nil {
 			return nil, err
 		}

@@ -7,20 +7,22 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/utils"
 )
 
 type Backend struct {
-	ID     string
-	Addr   string
-	URL    *url.URL
-	health bool
-	mu     sync.RWMutex
-	logger *slog.Logger
+	ID                string
+	Addr              string
+	URL               *url.URL
+	health            bool
+	mu                sync.RWMutex
+	logger            *slog.Logger
+	healthCheckClient *http.Client
 }
 
-func New(addr string, id string, logger *slog.Logger) (*Backend, error) {
+func New(addr string, id string, logger *slog.Logger, healthCheckTimeout time.Duration) (*Backend, error) {
 	backendURL, err := url.Parse(addr)
 	if err != nil {
 		return nil, err
@@ -31,6 +33,9 @@ func New(addr string, id string, logger *slog.Logger) (*Backend, error) {
 		Addr:   addr,
 		URL:    backendURL,
 		logger: logger,
+		healthCheckClient: &http.Client{
+			Timeout: healthCheckTimeout,
+		},
 	}
 
 	healthStatus := backend.CheckHealth()
@@ -48,7 +53,7 @@ func New(addr string, id string, logger *slog.Logger) (*Backend, error) {
 
 func (b *Backend) CheckHealth() bool {
 	url := fmt.Sprintf("%s/health", b.URL.String())
-	resp, err := http.Get(url)
+	resp, err := b.healthCheckClient.Get(url)
 	if err != nil {
 		return false
 	}
