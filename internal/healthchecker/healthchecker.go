@@ -34,27 +34,31 @@ func (h *HealthChecker) Start() {
 		)
 
 		for _, b := range h.backends {
-			currHealthStatus := b.GetHealth()
-			healthStatus := b.CheckHealth()
+			h.performHealthCheck(b)
+		}
+	}
+}
 
-			if currHealthStatus != healthStatus {
-				b.SetHealth(healthStatus)
+func (h *HealthChecker) performHealthCheck(b *backend.Backend) {
+	currHealthStatus := b.GetHealth()
+	healthStatus := b.CheckHealth()
 
-				if currHealthStatus && !healthStatus {
-					h.logger.Error(
-						"backend became unavailable",
-						"backendID", b.ID,
-						"backendURL", b.URL,
-					)
-				}
-				if !currHealthStatus && healthStatus {
-					h.logger.Info(
-						"backend recovered",
-						"backendID", b.ID,
-						"backendURL", b.URL,
-					)
-				}
-			}
+	if currHealthStatus != healthStatus {
+		b.SetHealth(healthStatus)
+
+		if currHealthStatus && !healthStatus {
+			h.logger.Error(
+				"backend became unavailable",
+				"backendID", b.ID,
+				"backendURL", b.URL,
+			)
+		}
+		if !currHealthStatus && healthStatus {
+			h.logger.Info(
+				"backend recovered",
+				"backendID", b.ID,
+				"backendURL", b.URL,
+			)
 		}
 	}
 }
