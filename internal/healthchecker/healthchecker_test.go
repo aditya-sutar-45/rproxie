@@ -1,6 +1,7 @@
 package healthchecker
 
 import (
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,28 +14,12 @@ import (
 func TestHealthChecker(t *testing.T) {
 	logger := logger.New()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// validation
-		time.Sleep(2 * time.Second)
-		w.WriteHeader(http.StatusOK)
-	}))
+	server := newTestServer(t)
 	defer server.Close()
 
-	b1, err := backend.New(server.URL, "1", logger)
-	if err != nil {
-		t.Fatal("Failed to create backend 1:", err)
-		return
-	}
-	b2, err := backend.New(server.URL, "2", logger)
-	if err != nil {
-		t.Fatal("Failed to create backend 2:", err)
-		return
-	}
-	b3, err := backend.New(server.URL, "3", logger)
-	if err != nil {
-		t.Fatal("Failed to create backend 3:", err)
-		return
-	}
+	b1 := newBackend(t, server, logger, 3*time.Second)
+	b2 := newBackend(t, server, logger, 3*time.Second)
+	b3 := newBackend(t, server, logger, 3*time.Second)
 
 	backends := []*backend.Backend{b1, b2, b3}
 
@@ -46,4 +31,30 @@ func TestHealthChecker(t *testing.T) {
 
 	timeTaken := time.Since(start)
 	logger.Info("Health check completed", "timeTaken", timeTaken)
+}
+
+func newTestServer(t *testing.T) *httptest.Server {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/health" {
+			t.Errorf("expected /health, got %s", r.URL.Path)
+		}
+
+		if r.Method != http.MethodGet {
+			t.Errorf("expected GET, got %s", r.Method)
+		}
+
+		time.Sleep(2 * time.Second)
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	return server
+}
+
+func newBackend(t *testing.T, server *httptest.Server, logger *slog.Logger, timeout time.Duration) *backend.Backend {
+	b, err := backend.New(server.URL, "1", logger, timeout)
+	if err != nil {
+		t.Fatal("Failed to create backend 1:", err)
+	}
+
+	return b
 }
