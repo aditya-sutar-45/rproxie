@@ -3,6 +3,7 @@ package healthchecker
 
 import (
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/backend"
@@ -12,6 +13,7 @@ type HealthChecker struct {
 	healthCheckDuration time.Duration
 	backends            []*backend.Backend
 	logger              *slog.Logger
+	wg                  sync.WaitGroup
 }
 
 func New(duration time.Duration, backends []*backend.Backend, logger *slog.Logger) *HealthChecker {
@@ -19,6 +21,7 @@ func New(duration time.Duration, backends []*backend.Backend, logger *slog.Logge
 		healthCheckDuration: duration,
 		backends:            backends,
 		logger:              logger,
+		wg:                  sync.WaitGroup{},
 	}
 }
 
@@ -33,13 +36,22 @@ func (h *HealthChecker) Start() {
 			"backendCount", len(h.backends),
 		)
 
-		for _, b := range h.backends {
-			h.performHealthCheck(b)
-		}
+		h.startHealthChecks()
 	}
 }
 
+func (h *HealthChecker) startHealthChecks() {
+	for _, b := range h.backends {
+		h.wg.Add(1)
+		go h.performHealthCheck(b)
+	}
+
+	h.wg.Wait()
+}
+
 func (h *HealthChecker) performHealthCheck(b *backend.Backend) {
+	defer h.wg.Done()
+
 	currHealthStatus := b.GetHealth()
 	healthStatus := b.CheckHealth()
 
