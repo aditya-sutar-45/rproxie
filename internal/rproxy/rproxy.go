@@ -2,11 +2,15 @@
 package rproxy
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/backend"
@@ -46,13 +50,51 @@ func New(port int, backendAddrs []string, logger *slog.Logger, tickerDuration ti
 
 func (rp *ReverseProxy) Start() error {
 	portString := fmt.Sprintf(":%d", rp.port)
-	http.HandleFunc("/", rp.handler)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", rp.handler)
+
+	server := http.Server{
+		Addr:    portString,
+		Handler: mux,
+	}
 
 	rp.logger.Info("server starting", "port", rp.port)
 
-	go rp.healthChecker.Start()
+	shutdown, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT, syscall.SIGTERM,
+	)
+	defer stop()
 
-	return http.ListenAndServe(portString, nil)
+	go rp.healthChecker.Start(shutdown)
+
+	go func() {
+		if err := server.ListenAndServe(); err != nil {
+			if errors.Is(err, http.ErrServerClosed) {
+				rp.logger.Info("server closed", "port", rp.port)
+				return
+			}
+			rp.logger.Error("server failed", "err", err)
+		}
+	}()
+
+	<-shutdown.Done()
+
+	rp.logger.Info("server stopped", "port", rp.port)
+
+	ctx, cancel := context.WithTimeout(
+		context.Background(),
+		20*time.Second,
+	)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		rp.logger.Error("server shutdown failed", "error", err)
+		return err
+	}
+	rp.logger.Info("server shutdown complete", "port", rp.port)
+
+	return nil
 }
 
 func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {

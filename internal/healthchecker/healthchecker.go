@@ -2,6 +2,7 @@
 package healthchecker
 
 import (
+	"context"
 	"log/slog"
 	"sync"
 	"time"
@@ -25,18 +26,23 @@ func New(duration time.Duration, backends []*backend.Backend, logger *slog.Logge
 	}
 }
 
-func (h *HealthChecker) Start() {
+func (h *HealthChecker) Start(shutdown context.Context) {
 	ticker := time.NewTicker(h.healthCheckDuration)
 	defer ticker.Stop()
 
-	for range ticker.C {
+	for {
+		select {
+		case <-ticker.C:
+			h.logger.Info(
+				"performing health checks",
+				"backendCount", len(h.backends),
+			)
 
-		h.logger.Info(
-			"performing health checks",
-			"backendCount", len(h.backends),
-		)
-
-		h.startHealthChecks()
+			h.startHealthChecks()
+		case <-shutdown.Done():
+			h.logger.Info("shutting down health checker")
+			return
+		}
 	}
 }
 
