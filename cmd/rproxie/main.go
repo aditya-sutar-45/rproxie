@@ -26,8 +26,10 @@ func main() {
 	rproxy, err := rproxy.New(
 		cfg.Port,
 		cfg.Backends,
-		appLogger,
 		time.Second*5,
+		cfg.RateLimitBucketCapacity,
+		cfg.RateLimitTokenRefilPerSecond,
+		appLogger,
 	)
 	if err != nil {
 		appLogger.Error("creating a reverse proxy", "error", err)

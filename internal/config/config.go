@@ -9,8 +9,10 @@ import (
 )
 
 type Config struct {
-	Port     int
-	Backends []string
+	Port                         int
+	Backends                     []string
+	RateLimitBucketCapacity      int
+	RateLimitTokenRefilPerSecond int
 }
 
 func Load() (*Config, error) {
@@ -21,8 +23,20 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("could not convert string to int: %v", err)
 	}
 
+	bucketCapacity, err := strconv.Atoi(os.Getenv("BUCKET_CAPACITY"))
+	if err != nil {
+		return nil, fmt.Errorf("could not convert string to int: %v", err)
+	}
+
+	refilPerSecond, err := strconv.Atoi(os.Getenv("TOKEN_REFIL_PER_SECOND"))
+	if err != nil {
+		return nil, fmt.Errorf("could not convert string to int: %v", err)
+	}
+
 	return &Config{
-		Port:     port,
-		Backends: backends,
+		Port:                         port,
+		Backends:                     backends,
+		RateLimitBucketCapacity:      bucketCapacity,
+		RateLimitTokenRefilPerSecond: refilPerSecond,
 	}, nil
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/aditya-sutar-45/rproxie/internal/backend"
 	"github.com/aditya-sutar-45/rproxie/internal/healthchecker"
 	"github.com/aditya-sutar-45/rproxie/internal/loadbalancer"
+	"github.com/aditya-sutar-45/rproxie/internal/ratelimiter"
 	"github.com/aditya-sutar-45/rproxie/internal/utils"
 )
 
@@ -26,9 +27,17 @@ type ReverseProxy struct {
 	logger        *slog.Logger
 	loadBalancer  loadbalancer.LoadBalancer
 	healthChecker *healthchecker.HealthChecker
+	rateLimiter   *ratelimiter.RateLimiter
 }
 
-func New(port int, backendAddrs []string, logger *slog.Logger, tickerDuration time.Duration) (*ReverseProxy, error) {
+func New(
+	port int,
+	backendAddrs []string,
+	tickerDuration time.Duration,
+	rateLimitBucketCapacity int,
+	rateLimitTokenRefilPerSecond int,
+	logger *slog.Logger,
+) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
 	for i, b := range backendAddrs {
 		backend, err := backend.New(b, strconv.Itoa(i), logger, 2*time.Second)
@@ -38,6 +47,11 @@ func New(port int, backendAddrs []string, logger *slog.Logger, tickerDuration ti
 		backends = append(backends, backend)
 	}
 
+	limiter := ratelimiter.New(
+		rateLimitBucketCapacity,
+		float64(rateLimitTokenRefilPerSecond),
+	)
+
 	return &ReverseProxy{
 		port:          port,
 		backends:      backends,
@@ -45,6 +59,7 @@ func New(port int, backendAddrs []string, logger *slog.Logger, tickerDuration ti
 		logger:        logger,
 		loadBalancer:  loadbalancer.New(len(backends)),
 		healthChecker: healthchecker.New(tickerDuration, backends, logger),
+		rateLimiter:   limiter,
 	}, nil
 }
 
@@ -98,6 +113,11 @@ func (rp *ReverseProxy) Start() error {
 }
 
 func (rp *ReverseProxy) handler(w http.ResponseWriter, r *http.Request) {
+	if !rp.rateLimiter.Allow() {
+		utils.RespondWithError(w, http.StatusTooManyRequests, "rate limit exceeded")
+		return
+	}
+
 	start := time.Now()
 
 	var logErr error
