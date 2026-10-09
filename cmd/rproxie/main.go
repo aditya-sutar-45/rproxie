@@ -21,6 +21,7 @@ func main() {
 	cfg, err := config.Load()
 	if err != nil {
 		appLogger.Error("could not load config", "error", err)
+		return
 	}
 
 	rproxy, err := rproxy.New(

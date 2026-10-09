@@ -82,18 +82,21 @@ func (rp *ReverseProxy) Start() error {
 	defer stop()
 
 	go rp.healthChecker.Start(shutdown)
+	errChannel := make(chan error, 1)
 
 	go func() {
-		if err := server.ListenAndServe(); err != nil {
-			if errors.Is(err, http.ErrServerClosed) {
-				rp.logger.Info("server closed", "port", rp.port)
-				return
-			}
-			rp.logger.Error("server failed", "err", err)
-		}
+		errChannel <- server.ListenAndServe()
 	}()
 
-	<-shutdown.Done()
+	select {
+	case <-shutdown.Done():
+	case err := <-errChannel:
+		if errors.Is(err, http.ErrServerClosed) {
+			rp.logger.Info("server closed")
+			return nil
+		}
+		return err
+	}
 
 	rp.logger.Info("server stopped", "port", rp.port)
 
