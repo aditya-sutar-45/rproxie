@@ -11,9 +11,13 @@ import (
 func main() {
 	appLogger := logger.New()
 
-	cfg, err := config.LoadYAML("./config_sample.yaml")
+	cfg, err := config.Load("./config_sample.yaml")
 	if err != nil {
 		appLogger.Error("could not load config", "error", err)
+		return
+	}
+	if err := cfg.Validate(); err != nil {
+		appLogger.Error("validating config file", "error", err)
 		return
 	}
 
