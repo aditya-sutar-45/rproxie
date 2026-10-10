@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/config"
@@ -9,18 +10,17 @@ import (
 )
 
 func main() {
-	appLogger := logger.New()
-
 	cfg, err := config.Load("./config_sample.yaml")
 	if err != nil {
-		appLogger.Error("could not load config", "error", err)
+		fmt.Printf("could not load config: %v", err)
 		return
 	}
 	if err := cfg.Validate(); err != nil {
-		appLogger.Error("validating config file", "error", err)
+		fmt.Printf("validating config file: %v", err)
 		return
 	}
 
+	appLogger := logger.New(cfg.Logging.Level)
 	rproxy, err := rproxy.New(
 		cfg.Server.Port,
 		cfg.Backends,

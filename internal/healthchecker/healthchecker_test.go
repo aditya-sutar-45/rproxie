@@ -12,7 +12,7 @@ import (
 )
 
 func TestHealthChecker(t *testing.T) {
-	logger := logger.New()
+	logger := logger.New("INFO")
 
 	server := newTestServer(t)
 	defer server.Close()

@@ -23,9 +23,8 @@ func ParseLogLevel(levelString string) slog.Level {
 	return level
 }
 
-func New() *slog.Logger {
-	logLevelString := os.Getenv("LOG_LEVEL")
-	level := ParseLogLevel(logLevelString)
+func New(logLevel string) *slog.Logger {
+	level := ParseLogLevel(logLevel)
 
 	opts := &slog.HandlerOptions{
 		Level: level,
