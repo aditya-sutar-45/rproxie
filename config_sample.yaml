@@ -1,0 +1,18 @@
+server:
+  port: 8000
+
+backends:
+  - id: backend-1
+    url: http://localhost:9001
+  - id: backend-2
+    url: http://localhost:9002
+  - id: backend-3
+    url: http://localhost:9003
+
+rate_limiter:
+  enabled: true
+  bucket_capacity: 10
+  refill_rate_per_second: 2
+
+logging:
+  level: INFO

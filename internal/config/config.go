@@ -4,39 +4,47 @@ package config
 import (
 	"fmt"
 	"os"
-	"strconv"
-	"strings"
+
+	"go.yaml.in/yaml/v4"
 )
 
-type Config struct {
-	Port                         int
-	Backends                     []string
-	RateLimitBucketCapacity      int
-	RateLimitTokenRefilPerSecond int
+type RProxieConfig struct {
+	Server      ServerConfig       `yaml:"server"`
+	Backends    []*BackendConfig   `yaml:"backends"`
+	RateLimiter *RateLimiterConfig `yaml:"rate_limiter"`
+	Logging     *LoggingConfig     `yaml:"logging"`
 }
 
-func Load() (*Config, error) {
-	backends := strings.Split(os.Getenv("BACKENDS"), ",")
+type ServerConfig struct {
+	Port int `yaml:"port"`
+}
 
-	port, err := strconv.Atoi(os.Getenv("PORT"))
+type BackendConfig struct {
+	ID  string `yaml:"id"`
+	URL string `yaml:"url"`
+}
+
+type RateLimiterConfig struct {
+	Enabled             bool `yaml:"enabled"`
+	BucketCapacity      int  `yaml:"bucket_capacity"`
+	RefillRatePerSecond int  `yaml:"refill_rate_per_second"`
+}
+
+type LoggingConfig struct {
+	Level string `yaml:"level"`
+}
+
+func LoadYAML(path string) (*RProxieConfig, error) {
+	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("could not convert string to int: %v", err)
+		return nil, fmt.Errorf("error loading config: %v", err)
 	}
 
-	bucketCapacity, err := strconv.Atoi(os.Getenv("BUCKET_CAPACITY"))
-	if err != nil {
-		return nil, fmt.Errorf("could not convert string to int: %v", err)
+	var config RProxieConfig
+
+	if err := yaml.Unmarshal(data, &config); err != nil {
+		return nil, fmt.Errorf("error parsing config file: %v", err)
 	}
 
-	refilPerSecond, err := strconv.Atoi(os.Getenv("TOKEN_REFIL_PER_SECOND"))
-	if err != nil {
-		return nil, fmt.Errorf("could not convert string to int: %v", err)
-	}
-
-	return &Config{
-		Port:                         port,
-		Backends:                     backends,
-		RateLimitBucketCapacity:      bucketCapacity,
-		RateLimitTokenRefilPerSecond: refilPerSecond,
-	}, nil
+	return &config, nil
 }

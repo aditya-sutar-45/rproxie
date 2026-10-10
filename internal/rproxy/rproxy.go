@@ -9,11 +9,11 @@ import (
 	"log/slog"
 	"net/http"
 	"os/signal"
-	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/backend"
+	"github.com/aditya-sutar-45/rproxie/internal/config"
 	"github.com/aditya-sutar-45/rproxie/internal/healthchecker"
 	"github.com/aditya-sutar-45/rproxie/internal/loadbalancer"
 	"github.com/aditya-sutar-45/rproxie/internal/ratelimiter"
@@ -32,15 +32,20 @@ type ReverseProxy struct {
 
 func New(
 	port int,
-	backendAddrs []string,
+	backendAddrs []*config.BackendConfig,
 	tickerDuration time.Duration,
 	rateLimitBucketCapacity int,
 	rateLimitTokenRefilPerSecond int,
 	logger *slog.Logger,
 ) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
-	for i, b := range backendAddrs {
-		backend, err := backend.New(b, strconv.Itoa(i), logger, 2*time.Second)
+	for _, b := range backendAddrs {
+		backend, err := backend.New(
+			b.URL,
+			b.ID,
+			logger,
+			2*time.Second,
+		)
 		if err != nil {
 			return nil, err
 		}
