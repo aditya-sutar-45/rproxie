@@ -8,7 +8,7 @@ import (
 )
 
 func TestStartsWithFullBucket(t *testing.T) {
-	r := New(5, 0)
+	r := New(5, 0, true)
 
 	expected := []bool{true, true, true, true, true, false}
 	cnt := len(expected)
@@ -28,7 +28,7 @@ func TestStartsWithFullBucket(t *testing.T) {
 }
 
 func TestRequestConsumesOneToken(t *testing.T) {
-	r := New(3, 0)
+	r := New(3, 0, true)
 
 	for i := range 3 {
 		if !r.Allow() {
@@ -42,7 +42,7 @@ func TestRequestConsumesOneToken(t *testing.T) {
 }
 
 func TestTokensRefillOverTime(t *testing.T) {
-	r := New(1, 10)
+	r := New(1, 10, true)
 
 	if !r.Allow() {
 		t.Error("request should have been allowed")
@@ -93,7 +93,7 @@ func TestUpdateTokenCount(t *testing.T) {
 }
 
 func TestConcurrentRequests(t *testing.T) {
-	r := New(50, 0)
+	r := New(50, 0, true)
 	successCount := 0
 	mu := sync.Mutex{}
 	wg := sync.WaitGroup{}

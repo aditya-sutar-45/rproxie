@@ -7,6 +7,7 @@ import (
 )
 
 type RateLimiter struct {
+	enabled             bool
 	bucketCapacity      int
 	tokenCount          float64
 	refillRatePerSecond float64 // in tokens per secound
@@ -14,8 +15,9 @@ type RateLimiter struct {
 	mu                  sync.RWMutex
 }
 
-func New(bucketCapacity int, refillRatePerSecond float64) *RateLimiter {
+func New(bucketCapacity int, refillRatePerSecond float64, enabled bool) *RateLimiter {
 	return &RateLimiter{
+		enabled:             enabled,
 		bucketCapacity:      bucketCapacity,
 		tokenCount:          float64(bucketCapacity),
 		refillRatePerSecond: refillRatePerSecond,
@@ -24,6 +26,10 @@ func New(bucketCapacity int, refillRatePerSecond float64) *RateLimiter {
 }
 
 func (r *RateLimiter) Allow() bool {
+	if !r.enabled {
+		return true
+	}
+
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	// Calculate elapsed time and  tokens earned

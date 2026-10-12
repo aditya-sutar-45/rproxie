@@ -34,6 +34,7 @@ func New(
 	port int,
 	backendAddrs []*config.BackendConfig,
 	tickerDuration time.Duration,
+	enableRateLimiter bool,
 	rateLimitBucketCapacity int,
 	rateLimitTokenRefilPerSecond int,
 	logger *slog.Logger,
@@ -55,6 +56,7 @@ func New(
 	limiter := ratelimiter.New(
 		rateLimitBucketCapacity,
 		float64(rateLimitTokenRefilPerSecond),
+		enableRateLimiter,
 	)
 
 	return &ReverseProxy{

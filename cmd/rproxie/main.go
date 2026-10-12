@@ -31,6 +31,7 @@ func main() {
 		cfg.Server.Port,
 		cfg.Backends,
 		time.Second*5,
+		cfg.RateLimiter.Enabled,
 		cfg.RateLimiter.BucketCapacity,
 		cfg.RateLimiter.RefillRatePerSecond,
 		appLogger,
