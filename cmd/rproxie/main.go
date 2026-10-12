@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"time"
 
@@ -10,7 +11,12 @@ import (
 )
 
 func main() {
-	cfg, err := config.Load("./config_sample.yaml")
+	configPath := flag.String("config", "./config_sample.yaml", "path to the config file")
+	flag.Parse()
+
+	fmt.Printf("config path: %s\n", *configPath)
+
+	cfg, err := config.Load(*configPath)
 	if err != nil {
 		fmt.Printf("could not load config: %v", err)
 		return
