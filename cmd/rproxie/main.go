@@ -1,8 +1,11 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/aditya-sutar-45/rproxie/internal/config"
@@ -27,6 +30,14 @@ func main() {
 	}
 
 	appLogger := logger.New(cfg.Logging.Level)
+
+	ctx, stop := signal.NotifyContext(
+		context.Background(),
+		syscall.SIGINT,
+		syscall.SIGTERM,
+	)
+	defer stop()
+
 	rproxy, err := rproxy.New(
 		cfg.Server.Port,
 		cfg.Backends,
@@ -41,7 +52,7 @@ func main() {
 		return
 	}
 
-	if err := rproxy.Start(); err != nil {
+	if err := rproxy.Start(ctx); err != nil {
 		appLogger.Error("starting a reverse proxy server", "error", err)
 		return
 	}
