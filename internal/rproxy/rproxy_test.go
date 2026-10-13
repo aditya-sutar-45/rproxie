@@ -1,4 +1,4 @@
-package rproxy
+package rproxy_test
 
 import (
 	"context"
@@ -11,6 +11,7 @@ import (
 
 	"github.com/aditya-sutar-45/rproxie/internal/config"
 	"github.com/aditya-sutar-45/rproxie/internal/logger"
+	"github.com/aditya-sutar-45/rproxie/internal/rproxy"
 	"github.com/aditya-sutar-45/rproxie/internal/utils"
 )
 
@@ -41,7 +42,7 @@ func TestReverseProxyIntegration(t *testing.T) {
 	}
 
 	testLogger := logger.New("INFO")
-	rp, err := New(cfg, 2*time.Second, testLogger)
+	rp, err := rproxy.New(cfg, 2*time.Second, testLogger)
 	if err != nil {
 		t.Errorf("error creating a reverse proxy: %v", err)
 		return
