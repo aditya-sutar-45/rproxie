@@ -28,16 +28,12 @@ type ReverseProxy struct {
 }
 
 func New(
-	port int,
-	backendAddrs []*config.BackendConfig,
+	cfg *config.RProxieConfig,
 	tickerDuration time.Duration,
-	enableRateLimiter bool,
-	rateLimitBucketCapacity int,
-	rateLimitTokenRefilPerSecond int,
 	logger *slog.Logger,
 ) (*ReverseProxy, error) {
 	backends := []*backend.Backend{}
-	for _, b := range backendAddrs {
+	for _, b := range cfg.Backends {
 		backend, err := backend.New(
 			b.URL,
 			b.ID,
@@ -51,13 +47,13 @@ func New(
 	}
 
 	limiter := ratelimiter.New(
-		rateLimitBucketCapacity,
-		float64(rateLimitTokenRefilPerSecond),
-		enableRateLimiter,
+		cfg.RateLimiter.BucketCapacity,
+		float64(cfg.RateLimiter.RefillRatePerSecond),
+		cfg.RateLimiter.Enabled,
 	)
 
 	return &ReverseProxy{
-		port:          port,
+		port:          cfg.Server.Port,
 		backends:      backends,
 		client:        &http.Client{},
 		logger:        logger,

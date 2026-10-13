@@ -39,12 +39,8 @@ func main() {
 	defer stop()
 
 	rproxy, err := rproxy.New(
-		cfg.Server.Port,
-		cfg.Backends,
+		cfg,
 		time.Second*5,
-		cfg.RateLimiter.Enabled,
-		cfg.RateLimiter.BucketCapacity,
-		cfg.RateLimiter.RefillRatePerSecond,
 		appLogger,
 	)
 	if err != nil {
