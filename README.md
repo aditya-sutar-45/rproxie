@@ -96,6 +96,16 @@ Run the binary from the project root to use the default config file, or pass a p
 ./bin/rproxie -config ./path/to/config.yaml
 ```
 
+## Tests
+
+Run the unit and integration test suite with:
+
+```sh
+go test ./...
+```
+
+The integration tests send GET and POST requests through the proxy and check that the method, path, query string, and POST body reach the backend.
+
 ## Project layout
 
 ```text
